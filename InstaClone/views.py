@@ -2,8 +2,8 @@
 from __future__ import unicode_literals
 
 from django.shortcuts import render, redirect
-from forms import SignUpForm, LoginForm, PostForm, LikeForm, CommentForm
-from models import UserModel, SessionToken, PostModel, LikeModel, CommentModel
+from forms import SignUpForm, LoginForm, PostForm, LikeForm, CommentForm, DislikeForm
+from models import UserModel, SessionToken, PostModel, LikeModel, CommentModel, DislikeModel
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta
 from django.utils import timezone
@@ -67,8 +67,9 @@ def post_view(request):
             form = PostForm(request.POST, request.FILES)
             if form.is_valid():
                 image = form.cleaned_data.get('image')
-                caption = form.cleaned_data.get('caption')
-                post = PostModel(user=user, image=image, caption=caption)
+                review = form.cleaned_data.get('review')
+                name = form.cleaned_data.get('name')
+                post = PostModel(user=user, image=image, review=review, name=name)
                 post.save()
 
                 path = str(BASE_DIR + post.image.url)
@@ -95,9 +96,19 @@ def feed_view(request):
         for post in posts:
 
             existing_like = LikeModel.objects.filter(post_id=post.id, user=user).first()
+            existing_dislike = DislikeModel.objects.filter(post_id=post.id, user=user).first()
             if existing_like:
-                post.has_liked = True
-
+                post.has_liked = False
+            if existing_dislike:
+                post.has_dislike =True
+            #     post.has_dislike = False
+            #
+            # elif existing_dislike:
+            #     post.has_dislike = True
+            #     post.has_liked = False
+            # else:
+            #     post.has_liked = False
+            #     post.has_dislike = False
 
         return render(request, 'feed.html', {'posts': posts})
     else:
@@ -108,16 +119,40 @@ def feed_view(request):
 
 
 def like_view(request):
+    print "Like view executed"
     user = check_validation(request)
     if user and request.method == 'POST':
         form = LikeForm(request.POST)
         if form.is_valid():
             post_id = form.cleaned_data.get('post').id
             existing_like = LikeModel.objects.filter(post_id=post_id, user=user).first()
+            existing_dislike = DislikeModel.objects.filter(post_id=post_id, user=user).first()
             if not existing_like:
+                if existing_dislike:
+                    existing_dislike.delete()
                 LikeModel.objects.create(post_id=post_id, user=user)
             else:
                 existing_like.delete()
+
+            return redirect('/feed/')
+
+    else:
+        return redirect('/login/')
+
+def dislike_view(request):
+    user = check_validation(request)
+    if user and request.method == 'POST':
+        form = DislikeForm(request.POST)
+        if form.is_valid():
+            post_id = form.cleaned_data.get('post').id
+            existing_dislike = DislikeModel.objects.filter(post_id=post_id, user=user).first()
+            existing_like = LikeModel.objects.filter(post_id=post_id, user=user).first()
+            if not existing_dislike:
+                if existing_like:
+                    existing_like.delete()
+                DislikeModel.objects.create(post_id=post_id, user=user)
+            else:
+                existing_dislike.delete()
 
             return redirect('/feed/')
 

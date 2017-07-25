@@ -29,22 +29,33 @@ class SessionToken(models.Model):
 class PostModel(models.Model):
 	user = models.ForeignKey(UserModel)
 	image = models.FileField(upload_to='user_images')
+	name = models.CharField(max_length=100)
 	image_url = models.CharField(max_length=255)
-	caption = models.CharField(max_length=240)
+	review = models.CharField(max_length=240)
 	created_on = models.DateTimeField(auto_now_add=True)
 	updated_on = models.DateTimeField(auto_now=True)
 	has_liked = False
-
+	has_dislike = False
 
 	@property
 	def like_count(self):
 		return len(LikeModel.objects.filter(post=self))
 
 	@property
+	def dislike_count(self):
+		return len(DislikeModel.objects.filter(post=self))
+
+	@property
 	def comments(self):
 		return CommentModel.objects.filter(post=self).order_by('created_on')
 
 class LikeModel(models.Model):
+	user = models.ForeignKey(UserModel)
+	post = models.ForeignKey(PostModel)
+	created_on = models.DateTimeField(auto_now_add=True)
+	updated_on = models.DateTimeField(auto_now=True)
+
+class DislikeModel(models.Model):
 	user = models.ForeignKey(UserModel)
 	post = models.ForeignKey(PostModel)
 	created_on = models.DateTimeField(auto_now_add=True)
